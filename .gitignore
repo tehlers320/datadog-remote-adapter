@@ -12,4 +12,13 @@
 *.out
 
 # Dependency directories (remove the comment below to include it)
-# vendor/
+vendor/
+
+# Binary
+datadog-remote-adapter
+__debug_bin
+tests/prometheus/prometheus 
+tests/prometheus/data
+
+# IDEs
+.vscode
