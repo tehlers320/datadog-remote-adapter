@@ -198,6 +198,10 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 
 	}
 
+	if q.Hints.Func == "sum" {
+		ddogFormat = fmt.Sprintf("sum:" + ddogFormat)
+	}
+
 	tags := strings.Join(matchers, ",")
 	tags = strings.ReplaceAll(tags, "\"", "");
 	// Not sure why its adding the single quotes... anyways
@@ -206,6 +210,7 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 		tags = "*"
 	}
 	ddogFormat = fmt.Sprintf(ddogFormat +  "{" + tags + "}")
+
 	// DDog wont take timestamps in ms....
 	// TODO probably check the values are valid. Maybe
 	to := toSeconds(q.EndTimestampMs)
