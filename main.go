@@ -37,6 +37,7 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	"github.com/tehlers320/datadog-remote-adapter/datadog"
+	vc "github.com/tehlers320/datadog-remote-adapter/config"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/prometheus/prometheus/storage/remote"
 )
@@ -98,6 +99,10 @@ func init() {
 
 func main() {
 	cfg := parseFlags()
+	err := vc.InitConfig()
+	if err != nil {
+		fmt.Printf("Could not initialize config! %q", err)
+	}
 	http.Handle(cfg.telemetryPath, promhttp.Handler())
 
 	logger := promlog.New(&cfg.promlogConfig)
@@ -119,8 +124,6 @@ func parseFlags() *config {
 	}
 
 
-	a.Flag("datadog-enabled", "Enables datadog reader").
-		Default("").BoolVar(&cfg.datadogEnabled)
 	a.Flag("send-timeout", "The timeout to use when sending samples to the remote storage.").
 		Default("30s").DurationVar(&cfg.remoteTimeout)
 	a.Flag("web.listen-address", "Address to listen on for web endpoints.").
@@ -153,11 +156,8 @@ type reader interface {
 func buildClients(logger log.Logger, cfg *config) ([]writer, []reader) {
 	var writers []writer
 	var readers []reader
-	if cfg.datadogEnabled {
-		c := datadog.NewClient(log.With(logger, "storage", "datadog"))
-		readers = append(readers, c)
-		fmt.Println("ddog mode enabled")
-	}
+	c := datadog.NewClient(log.With(logger, "storage", "datadog"))
+	readers = append(readers, c)
 	level.Info(logger).Log("msg", "Starting up...")
 	return writers, readers
 }

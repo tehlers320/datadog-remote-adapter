@@ -24,6 +24,7 @@ import (
 	"github.com/go-kit/log/level"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/prompb"
+	"github.com/spf13/viper"
 	"golang.org/x/net/context"
 
 	"github.com/DataDog/datadog-api-client-go/v2/api/datadog"
@@ -34,7 +35,7 @@ import (
 type Client struct {
 	logger 		log.Logger
 	context 	context.Context
-	client     *datadogV1.MetricsApi
+	client      *datadogV1.MetricsApi
 }
 
 // NewClient creates a new Client.
@@ -84,9 +85,6 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	return &resp, nil
 
 	
-//	resp, r, err := c.client.QueryMetrics(c.context, time.Now().AddDate(0, 0, -1).Unix(), time.Now().Unix(), "system.cpu.idle{*}")
-
-	return &prompb.ReadResponse{}, nil
 }
 
 func (c *Client)runQuery(query string, to int64, from int64)  datadogV1.MetricsQueryResponse {
@@ -97,11 +95,9 @@ func (c *Client)runQuery(query string, to int64, from int64)  datadogV1.MetricsQ
 		level.Debug(c.logger).Log("msg", "Error when calling `MetricsApi.QueryMetrics`: %v\n", err)
 		level.Debug(c.logger).Log("msg", "Full HTTP response: %v\n", r)
 	}
-	//labelsToSeries := map[string]*prompb.TimeSeries{}
-	//mergeResult(labelsToSeries, []datadogV1.MetricsQueryResponse{resp})
 
 	responseContent, _ := json.MarshalIndent(resp, "", "  ")
-	level.Info(c.logger).Log("msg","Response from `MetricsApi.QueryMetrics`:\n%s\n", responseContent)
+	level.Debug(c.logger).Log("msg","Response from `MetricsApi.QueryMetrics`:\n%s\n", responseContent)
 	return resp
 }
 
@@ -144,41 +140,6 @@ func valuesToSamples(values [][]*float64) ([]prompb.Sample, error) {
 		})
 	}
 	return samples, nil
-}
-
-func tagsToLabelPairs(name string, tags map[string]string) []prompb.Label {
-	pairs := make([]prompb.Label, 0, len(tags))
-	for k, v := range tags {
-		if v == "" {
-			// If we select metrics with different sets of labels names,
-			// InfluxDB returns *all* possible tag names on all returned
-			// series, with empty tag values on series where they don't
-			// apply. In Prometheus, an empty label value is equivalent
-			// to a non-existent label, so we just skip empty ones here
-			// to make the result correct.
-			continue
-		}
-		pairs = append(pairs, prompb.Label{
-			Name:  k,
-			Value: v,
-		})
-	}
-	pairs = append(pairs, prompb.Label{
-		Name:  model.MetricNameLabel,
-		Value: name,
-	})
-	return pairs
-}
-
-func concatLabels(labels map[string]string) string {
-	// 0xff cannot occur in valid UTF-8 sequences, so use it
-	// as a separator here.
-	separator := "\xff"
-	pairs := make([]string, 0, len(labels))
-	for k, v := range labels {
-		pairs = append(pairs, k+separator+v)
-	}
-	return strings.Join(pairs, separator)
 }
 
 // mergeSamples merges two lists of sample pairs and removes duplicate
@@ -246,14 +207,12 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 	}
 	ddogFormat = fmt.Sprintf(ddogFormat +  "{" + tags + "}")
 	// DDog wont take timestamps in ms....
-
 	// TODO probably check the values are valid. Maybe
 	to := toSeconds(q.EndTimestampMs)
 	from := toSeconds(q.StartTimestampMs)
 	return ddogFormat, to, from, nil
 
 
-//	return fmt.Sprintf("%s", strings.Join(matchers, " AND ")), nil
 }
 
 
@@ -261,6 +220,14 @@ func toSeconds(millis int64) int64 {
 	return time.Unix(0, millis * int64(time.Millisecond)).Unix()
 }
 
-func replaceDot(str string) string {
+func replaceDot(str string) string { 
+	mappings := viper.GetStringMapString("mappings")
+
+	_, ok := mappings[str]
+	if ok {
+		converted := mappings[str]
+		return converted
+	} 
+
 	return strings.Replace(str, `_`, `.`, -1)
 }
