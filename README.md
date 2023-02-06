@@ -1,5 +1,5 @@
 # datadog-remote-adapter
-covert datadog metrics to what they should be, prometheus
+Covert datadog metrics to prometheus metrics.
 
 
 ## Mappings
