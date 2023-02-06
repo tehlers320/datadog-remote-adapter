@@ -10,3 +10,7 @@ mappings:
   kubernetes_state_container_memory_requested: kubernetes_state.container.memory_requested
   some_metric_foo: some.metric_foo
 ```
+
+## Kubernetes setup
+Setup your k8s secret `datadog` prior to running
+see documentation [here](docs/examples/kubernetes.yaml)

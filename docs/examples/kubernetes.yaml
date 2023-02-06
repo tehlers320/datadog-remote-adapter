@@ -1,0 +1,141 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: datadog-adapter
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prom-config
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+      evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+    rule_files:
+    scrape_configs:
+    remote_read:
+      - url: "http://localhost:9201/read"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dda-config
+data:
+  custom.yaml: |
+    mappings:
+      kube_node_status_capacity_memory_bytes: kubernetes_state.node.memory_capacity
+      node_total_hourly_cost: node_total_hourly_cost
+      node_ram_hourly_cost: node_ram_hourly_cost
+      node_cpu_hourly_cost: node_cpu_hourly_cost
+      node_gpu_count: node_gpu_count
+      container_cpu_allocation: container_cpu_allocation
+      container_memory_allocation_bytes: container_memory_allocation_bytes
+      pod_pvc_allocation: pod_pvc_allocation
+      pv_hourly_cost: pv_hourly_cost
+      kube_node_labels: kubernetes_state.node.age
+      etcd_object_counts: kube_apiserver.etcd_object_counts
+      apiserver_request_total: kube_apiserver.apiserver_request_total
+      apiserver_request_duration_seconds_bucket: kube_apiserver.request_duration_seconds.count
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datadog-adapter
+  labels:
+    app: datadog-adapter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datadog-adapter
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: datadog-adapter
+    spec:
+      restartPolicy: Always
+      serviceAccountName: datadog-adapter
+      containers:
+        - name: datadog-adapter
+          image: ehlers320/datadog-remote-adapter:335ca0f
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "55M"
+            limits:
+              cpu: "999m"
+              memory: "1G"
+          ports:
+            - containerPort: 9201
+          env:
+            - name: DRA_CUSTOM_MAPPING_LOCATION
+              value: /DRA/custom.yaml
+            - name: DD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: datadog
+                  key: api_key
+            - name: DD_APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: datadog
+                  key: app_key
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: dda-config
+              mountPath: /DRA/
+        - name: prometheus
+          image: prom/prometheus:v2.40.6
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "55M"
+            limits:
+              cpu: "999m"
+              memory: "1G"
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus/"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config-volume
+              mountPath: /etc/prometheus/
+            - name: prometheus-storage-volume
+              mountPath: /prometheus/
+      volumes:
+        - name: prometheus-config-volume
+          configMap:
+            defaultMode: 420
+            name: prom-config
+        - name: prometheus-storage-volume
+          emptyDir: {}
+        - name: dda-config
+          configMap:
+            defaultMode: 420
+            name: dda-config
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: datadog-adapter
+spec:
+  selector:
+    app: datadog-adapter
+  type: ClusterIP
+  ports:
+    - name: datadog-adapter
+      port: 9090
+      targetPort: 9090
