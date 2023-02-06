@@ -128,10 +128,14 @@ func mergeResult(labelsToSeries map[string]*prompb.TimeSeries, results []datadog
 func valuesToSamples(values [][]*float64) ([]prompb.Sample, error) {
 	samples := make([]prompb.Sample, 0, len(values))
 	for _, v := range values {
-		samples = append(samples, prompb.Sample{
-			Timestamp: int64(*v[0]),
-			Value:     *v[1],
-		})
+		// Datadog returns timestamps when datapoints dont exist, prom cant process these. So dont store them
+		if v[1] != nil {
+			samples = append(samples, prompb.Sample{
+				Timestamp: int64(*v[0]),
+				Value:     *v[1],
+			})
+		}
+
 	}
 	return samples, nil
 }
@@ -198,6 +202,14 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 		ddogFormat = fmt.Sprintf("sum:" + ddogFormat)
 	}
 
+	if q.Hints.Func == "max" {
+		ddogFormat = fmt.Sprintf("max:" + ddogFormat)
+	}
+
+	if q.Hints.Func == "min" {
+		ddogFormat = fmt.Sprintf("min:" + ddogFormat)
+	}
+
 	tags := strings.Join(matchers, ",")
 	tags = strings.ReplaceAll(tags, "\"", "")
 	// Not sure why its adding the single quotes... anyways
@@ -206,6 +218,13 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 		tags = "*"
 	}
 	ddogFormat = fmt.Sprintf(ddogFormat + "{" + tags + "}")
+
+	//avg:system.cpu.user{*} by {something}
+	// TODO: The above doesnt work, something is wrong with the mapping
+	// TODO: check more than just 0
+	if len(q.Hints.Grouping) > 0 {
+		ddogFormat = fmt.Sprintf(ddogFormat  + " by {" + q.Hints.Grouping[0] + "}")
+	}
 
 	// DDog wont take timestamps in ms....
 	// TODO probably check the values are valid. Maybe
