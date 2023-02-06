@@ -1,3 +1,10 @@
+# Early development
+WARNING, this is in early development and many things dont work. But very very basic queries should.
+
+parsing out values `by` currently is the big one.
+
+* sum(kubernetes_state_container_memory_requested) by (SOMETHING)
+
 # datadog-remote-adapter
 Covert datadog metrics to prometheus metrics.
 
