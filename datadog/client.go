@@ -183,17 +183,20 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 			continue
 		}
 
-		switch m.Type {
-		case prompb.LabelMatcher_EQ:
-			matchers = append(matchers, fmt.Sprintf("%s:'%s'", m.Name, m.Value))
-		case prompb.LabelMatcher_NEQ:
-			matchers = append(matchers, fmt.Sprintf("!%s:'%s'", m.Name, m.Value))
-		case prompb.LabelMatcher_RE:
-			matchers = append(matchers, fmt.Sprintf("%s:%s", m.Name, m.Value))
-		case prompb.LabelMatcher_NRE:
-			matchers = append(matchers, fmt.Sprintf("!%s:%s", m.Name, m.Value))
-		default:
-			return "", 0, 0, fmt.Errorf("unknown match type %v", m.Type)
+		// TODO: deal with prometheus method of not exists labels better.
+		if m.Value != "" {
+			switch m.Type {
+			case prompb.LabelMatcher_EQ:
+				matchers = append(matchers, fmt.Sprintf("%s:'%s'", m.Name, m.Value))
+			case prompb.LabelMatcher_NEQ:
+				matchers = append(matchers, fmt.Sprintf("!%s:'%s'", m.Name, m.Value))
+			case prompb.LabelMatcher_RE:
+				matchers = append(matchers, fmt.Sprintf("%s:%s", m.Name, m.Value))
+			case prompb.LabelMatcher_NRE:
+				matchers = append(matchers, fmt.Sprintf("!%s:%s", m.Name, m.Value))
+			default:
+				return "", 0, 0, fmt.Errorf("unknown match type %v", m.Type)
+			}
 		}
 
 	}
