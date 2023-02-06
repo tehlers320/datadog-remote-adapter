@@ -36,10 +36,10 @@ import (
 	"github.com/prometheus/common/promlog/flag"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"github.com/tehlers320/datadog-remote-adapter/datadog"
-	vc "github.com/tehlers320/datadog-remote-adapter/config"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/prometheus/prometheus/storage/remote"
+	vc "github.com/tehlers320/datadog-remote-adapter/config"
+	"github.com/tehlers320/datadog-remote-adapter/datadog"
 )
 
 type config struct {
@@ -122,7 +122,6 @@ func parseFlags() *config {
 		influxdbPassword: os.Getenv("INFLUXDB_PW"),
 		promlogConfig:    promlog.Config{},
 	}
-
 
 	a.Flag("send-timeout", "The timeout to use when sending samples to the remote storage.").
 		Default("30s").DurationVar(&cfg.remoteTimeout)

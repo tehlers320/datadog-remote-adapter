@@ -119,9 +119,62 @@ func Test_mergeSamples(t *testing.T) {
 		want []prompb.Sample
 	}{
 		{
-		name: "",
-		args: args{
-			a: []prompb.Sample{
+			name: "",
+			args: args{
+				a: []prompb.Sample{
+					{
+						Value:     1.0,
+						Timestamp: 1600000000,
+					},
+					{
+						Value:     1.0,
+						Timestamp: 1600000010,
+					},
+					{
+						Value:     1.0,
+						Timestamp: 1600000020,
+					},
+					{
+						Value:     9.0,
+						Timestamp: 1600000030,
+					},
+					{
+						Value:     1.0,
+						Timestamp: 1600000040,
+					},
+					{
+						Value:     1.0,
+						Timestamp: 1600000050,
+					},
+				},
+				b: []prompb.Sample{
+					{
+						Value:     2.0,
+						Timestamp: 1600000000,
+					},
+					{
+						Value:     2.0,
+						Timestamp: 1600000010,
+					},
+					{
+						Value:     2.0,
+						Timestamp: 1600000020,
+					},
+					{
+						Value:     9.0,
+						Timestamp: 1600000030,
+					},
+					{
+						Value:     2.0,
+						Timestamp: 1600000040,
+					},
+					{
+						Value:     2.0,
+						Timestamp: 1600000050,
+					},
+				},
+			},
+			want: []prompb.Sample{
 				{
 					Value:     1.0,
 					Timestamp: 1600000000,
@@ -147,60 +200,7 @@ func Test_mergeSamples(t *testing.T) {
 					Timestamp: 1600000050,
 				},
 			},
-			b: []prompb.Sample{
-				{
-					Value:     2.0,
-					Timestamp: 1600000000,
-				},
-				{
-					Value:     2.0,
-					Timestamp: 1600000010,
-				},
-				{
-					Value:     2.0,
-					Timestamp: 1600000020,
-				},
-				{
-					Value:     9.0,
-					Timestamp: 1600000030,
-				},
-				{
-					Value:     2.0,
-					Timestamp: 1600000040,
-				},
-				{
-					Value:     2.0,
-					Timestamp: 1600000050,
-				},
-			},
 		},
-		want: []prompb.Sample{
-			{
-				Value:     1.0,
-				Timestamp: 1600000000,
-			},
-			{
-				Value:     1.0,
-				Timestamp: 1600000010,
-			},
-			{
-				Value:     1.0,
-				Timestamp: 1600000020,
-			},
-			{
-				Value:     9.0,
-				Timestamp: 1600000030,
-			},
-			{
-				Value:     1.0,
-				Timestamp: 1600000040,
-			},
-			{
-				Value:     1.0,
-				Timestamp: 1600000050,
-			},
-		},
-	},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

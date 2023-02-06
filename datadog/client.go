@@ -33,9 +33,9 @@ import (
 
 // Client allows reading from datadog
 type Client struct {
-	logger 		log.Logger
-	context 	context.Context
-	client      *datadogV1.MetricsApi
+	logger  log.Logger
+	context context.Context
+	client  *datadogV1.MetricsApi
 }
 
 // NewClient creates a new Client.
@@ -51,9 +51,9 @@ func NewClient(logger log.Logger) *Client {
 	}
 
 	return &Client{
-		logger:          logger,
-		context:         ctx,
-		client:          api,
+		logger:  logger,
+		context: ctx,
+		client:  api,
 	}
 }
 
@@ -70,9 +70,7 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 			return nil, err
 		}
 
-
 	}
-
 
 	resp := prompb.ReadResponse{
 		Results: []*prompb.QueryResult{
@@ -84,10 +82,9 @@ func (c *Client) Read(req *prompb.ReadRequest) (*prompb.ReadResponse, error) {
 	}
 	return &resp, nil
 
-	
 }
 
-func (c *Client)runQuery(query string, to int64, from int64)  datadogV1.MetricsQueryResponse {
+func (c *Client) runQuery(query string, to int64, from int64) datadogV1.MetricsQueryResponse {
 
 	resp, r, err := c.client.QueryMetrics(c.context, from, to, query)
 
@@ -97,7 +94,7 @@ func (c *Client)runQuery(query string, to int64, from int64)  datadogV1.MetricsQ
 	}
 
 	responseContent, _ := json.MarshalIndent(resp, "", "  ")
-	level.Debug(c.logger).Log("msg","Response from `MetricsApi.QueryMetrics`:\n%s\n", responseContent)
+	level.Debug(c.logger).Log("msg", "Response from `MetricsApi.QueryMetrics`:\n%s\n", responseContent)
 	return resp
 }
 
@@ -105,8 +102,6 @@ func (c *Client)runQuery(query string, to int64, from int64)  datadogV1.MetricsQ
 func (c Client) Name() string {
 	return "datadog"
 }
-
-
 
 func mergeResult(labelsToSeries map[string]*prompb.TimeSeries, results []datadogV1.MetricsQueryResponse) error {
 	for _, r := range results {
@@ -129,7 +124,6 @@ func mergeResult(labelsToSeries map[string]*prompb.TimeSeries, results []datadog
 	}
 	return nil
 }
-
 
 func valuesToSamples(values [][]*float64) ([]prompb.Sample, error) {
 	samples := make([]prompb.Sample, 0, len(values))
@@ -165,12 +159,11 @@ func mergeSamples(a, b []prompb.Sample) []prompb.Sample {
 	return result
 }
 
-
 func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 	var ddogFormat string
 	matchers := make([]string, 0, len(q.Matchers))
 	//matchers := make([]string, 0, len(q.Matchers))
-	// convert to ddog format 
+	// convert to ddog format
 	// example: system.cpu.idle{host:foo,cluster:bar}} == system_cpu_idle{host="foo",cluster="bar"}
 	for _, m := range q.Matchers {
 		if m.Name == model.MetricNameLabel {
@@ -206,13 +199,13 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 	}
 
 	tags := strings.Join(matchers, ",")
-	tags = strings.ReplaceAll(tags, "\"", "");
+	tags = strings.ReplaceAll(tags, "\"", "")
 	// Not sure why its adding the single quotes... anyways
-	tags = strings.ReplaceAll(tags, "'", "");
+	tags = strings.ReplaceAll(tags, "'", "")
 	if tags == "" {
 		tags = "*"
 	}
-	ddogFormat = fmt.Sprintf(ddogFormat +  "{" + tags + "}")
+	ddogFormat = fmt.Sprintf(ddogFormat + "{" + tags + "}")
 
 	// DDog wont take timestamps in ms....
 	// TODO probably check the values are valid. Maybe
@@ -220,22 +213,20 @@ func (c *Client) buildQuery(q *prompb.Query) (string, int64, int64, error) {
 	from := toSeconds(q.StartTimestampMs)
 	return ddogFormat, to, from, nil
 
-
 }
-
 
 func toSeconds(millis int64) int64 {
-	return time.Unix(0, millis * int64(time.Millisecond)).Unix()
+	return time.Unix(0, millis*int64(time.Millisecond)).Unix()
 }
 
-func replaceDot(str string) string { 
+func replaceDot(str string) string {
 	mappings := viper.GetStringMapString("mappings")
 
 	_, ok := mappings[str]
 	if ok {
 		converted := mappings[str]
 		return converted
-	} 
+	}
 
 	return strings.Replace(str, `_`, `.`, -1)
 }
